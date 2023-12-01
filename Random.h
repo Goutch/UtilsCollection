@@ -3,7 +3,7 @@
 #include "Core.h"
 #include <cstdlib>
 
-namespace HBE {
+namespace utils {
 	class HB_API Random {
 	public:
 		static float floatRange(float min, float max);
