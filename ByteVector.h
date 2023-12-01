@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include "string"
+
 struct ByteVector {
 private:
 	const size_t element_size;

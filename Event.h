@@ -1,12 +1,10 @@
 #pragma once
-#include "Core.h"
 #include "unordered_set"
 #include "functional"
 #include "Function.h"
 #include "unordered_map"
 
 template<typename... Args>
-
 class Event {
     std::unordered_set<void (*)(Args...)> static_callbacks;
     std::unordered_map<void *, std::function<void(Args...)>> instances_callbacks;
