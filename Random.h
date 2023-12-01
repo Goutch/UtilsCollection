@@ -4,7 +4,7 @@
 #include <cstdlib>
 
 namespace utils {
-	class HB_API Random {
+	class Random {
 	public:
 		static float floatRange(float min, float max);
 
