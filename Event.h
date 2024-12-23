@@ -9,7 +9,7 @@ namespace utils {
 	template<typename... Args>
 	class Event {
 		std::unordered_set<void (*)(Args...)> static_callbacks;
-		std::unordered_map<void *, std::function<void(Args...)>> instances_callbacks;
+		std::unordered_map<void *, FunctionRef<void, Args...>> instances_callbacks;
 	public:
 		void subscribe(void(*static_callback)(Args...)) {
 			static_callbacks.insert(static_callback);
@@ -21,7 +21,8 @@ namespace utils {
 
 		template<typename Object>
 		void subscribe(Object *instance, void(Object::* fun)(Args...)) {
-			instances_callbacks.emplace(instance, Attach(fun, instance));
+			FunctionRef<void, Args...> f(instance, fun);
+			instances_callbacks.emplace(instance, f);
 		}
 
 		void unsubscribe(void *instance) {
