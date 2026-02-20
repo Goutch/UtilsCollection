@@ -2,7 +2,7 @@
 
 #include "functional"
 
-namespace utils {
+namespace HBE {
 
 
 	template<typename Return, typename... Args>

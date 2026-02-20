@@ -34,40 +34,39 @@ namespace HBE {
 			sorted_listeners = std::move(other.sorted_listeners);
 		}
 
-		Event &operator=(const Event &&other)  noexcept {
+		Event &operator=(const Event &&other) noexcept {
 			container = std::move(other.container);
 			sorted_listeners = std::move(other.sorted_listeners);
 			return *this;
 		}
 
-		event_subscription_id subscribe(std::function<void(Args...)> function, int priority) {
-			event_subscription_id id = container.create();
+		void subscribe(event_subscription_id &id, std::function<void(Args...)> function, int priority) {
+			id = container.create();
 			container.set(id, Listener{id, priority, std::move(function)});
 			sorted_listeners.push_back(container.get(id));
 			std::stable_sort(sorted_listeners.begin(), sorted_listeners.end(),
 			                 [](auto &a, auto &b) { return a.priority < b.priority; });
 
-			return id;
 		}
 
 		bool valid(event_subscription_id id) {
 			return container.valid(id);
 		}
 
-		event_subscription_id subscribe(void (*fn)(Args...), int priority = 0) {
-			return subscribe(
-					[fn](Args... args) { fn(args...); },
-					priority
+		void subscribe(event_subscription_id &id, void (*fn)(Args...), int priority = 0) {
+			subscribe(id,
+			          [fn](Args... args) { fn(args...); },
+			          priority
 			);
 		}
 
 		template<typename T>
-		event_subscription_id subscribe(T *instance, void (T::*method)(Args...), int priority = 0) {
-			return subscribe(
-					[instance, method](Args... args) {
-						(instance->*method)(args...);
-					},
-					priority
+		void subscribe(event_subscription_id &id, T *instance, void (T::*method)(Args...), int priority = 0) {
+			subscribe(id,
+			          [instance, method](Args... args) {
+				          (instance->*method)(args...);
+			          },
+			          priority
 			);
 		}
 

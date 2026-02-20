@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include "string"
 
-namespace utils {
+namespace HBE {
 	struct ByteVector {
 	private:
 		const size_t element_size;
