@@ -7,7 +7,7 @@
 #define NANOSECONDS_TO_SECONDS (1.0/1000000000.0)
 #define NANOSECONDS_TO_MILISECONDS (1.0/1000000.0)
 #define MILISECONDS_TO_SECONDS (1.0/1000.0)
-namespace utils {
+namespace HBE {
 
 	class Timer {
 		std::chrono::high_resolution_clock::time_point start_time;

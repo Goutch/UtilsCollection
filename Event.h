@@ -1,41 +1,98 @@
 #pragma once
 
+#include <vector>
+#include <deque>
+#include <algorithm>
 #include "unordered_set"
 #include "functional"
-#include "Function.h"
 #include "unordered_map"
+#include "HandleContainer.h"
 
-namespace utils {
+namespace HBE {
+	using event_subscription_id = Handle;
+
 	template<typename... Args>
 	class Event {
-		std::unordered_set<void (*)(Args...)> static_callbacks;
-		std::unordered_map<void *, FunctionRef<void, Args...>> instances_callbacks;
-	public:
-		void subscribe(void(*static_callback)(Args...)) {
-			static_callbacks.insert(static_callback);
-		}
-
-		void unsubscribe(void(*static_callback)(Args...)) {
-			static_callbacks.erase(static_callback);
-		}
-
-		template<typename Object>
-		void subscribe(Object *instance, void(Object::* fun)(Args...)) {
-			FunctionRef<void, Args...> f(instance, fun);
-			instances_callbacks.emplace(instance, f);
-		}
-
-		void unsubscribe(void *instance) {
-			instances_callbacks.erase((void *) instance);
-		}
-
-		void invoke(Args... args) const {
-			for (void (*c)(Args...): static_callbacks) {
-				c(args...);
-			}
-			for (const std::pair<void *, std::function<void(Args...)>> pair: instances_callbacks) {
-				pair.second(args...);
-			}
+		struct Listener {
+			event_subscription_id id;
+			int priority;
+			std::function<void(Args...)> callback;
 		};
+
+		HandleContainer<Listener> container;
+		std::vector<Listener> sorted_listeners;
+		size_t next_id = 0;
+	public:
+		Event() = default;
+
+		Event(const Event &) = delete;
+
+		Event &operator=(const Event &) = delete;
+
+		Event(Event &&other) noexcept {
+			container = std::move(other.container);
+			sorted_listeners = std::move(other.sorted_listeners);
+		}
+
+		Event &operator=(const Event &&other)  noexcept {
+			container = std::move(other.container);
+			sorted_listeners = std::move(other.sorted_listeners);
+			return *this;
+		}
+
+		event_subscription_id subscribe(std::function<void(Args...)> function, int priority) {
+			event_subscription_id id = container.create();
+			container.set(id, Listener{id, priority, std::move(function)});
+			sorted_listeners.push_back(container.get(id));
+			std::stable_sort(sorted_listeners.begin(), sorted_listeners.end(),
+			                 [](auto &a, auto &b) { return a.priority < b.priority; });
+
+			return id;
+		}
+
+		bool valid(event_subscription_id id) {
+			return container.valid(id);
+		}
+
+		event_subscription_id subscribe(void (*fn)(Args...), int priority = 0) {
+			return subscribe(
+					[fn](Args... args) { fn(args...); },
+					priority
+			);
+		}
+
+		template<typename T>
+		event_subscription_id subscribe(T *instance, void (T::*method)(Args...), int priority = 0) {
+			return subscribe(
+					[instance, method](Args... args) {
+						(instance->*method)(args...);
+					},
+					priority
+			);
+		}
+
+		void unsubscribe(event_subscription_id id) {
+			if (container.valid(id)) {
+				container.release(id);
+				for (int i = sorted_listeners.size() - 1; i >= 0; --i) {
+					if (sorted_listeners[i].id == id) {
+						sorted_listeners.erase(sorted_listeners.begin() + i);
+						break;
+					}
+				}
+			} else {
+				printf("Trying to unsubscribe from an event with invalid subscription id ");
+			}
+		}
+
+		template<typename... CallArgs>
+		void invoke(CallArgs &&... args) {
+			for (const Listener &l: sorted_listeners)
+				l.callback(std::forward<CallArgs>(args)...);
+		}
+
+		uint32_t listenerCount() const {
+			return sorted_listeners.size();
+		}
 	};
 }

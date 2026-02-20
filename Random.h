@@ -2,7 +2,7 @@
 
 #include <cstdlib>
 
-namespace utils {
+namespace HBE {
 	class Random {
 	public:
 		static float floatRange(float min, float max) {
