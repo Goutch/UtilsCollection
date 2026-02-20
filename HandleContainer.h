@@ -27,8 +27,8 @@ namespace HBE {
 			handles = std::move(other.handles);
 			data = std::move(other.data);
 		}
-		HandleContainer &operator=(const HandleContainer &other) = delete;
-		HandleContainer &operator=(const HandleContainer &&other) noexcept {
+		HandleContainer &operator=(HandleContainer &other) = delete;
+		HandleContainer &operator=(HandleContainer &&other) noexcept {
 			free_handles_indices = std::move(other.free_handles_indices);
 			handles = std::move(other.handles);
 			data = std::move(other.data);

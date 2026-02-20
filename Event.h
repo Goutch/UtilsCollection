@@ -34,7 +34,7 @@ namespace HBE {
 			sorted_listeners = std::move(other.sorted_listeners);
 		}
 
-		Event &operator=(const Event &&other) noexcept {
+		Event &operator=(Event &&other) noexcept {
 			container = std::move(other.container);
 			sorted_listeners = std::move(other.sorted_listeners);
 			return *this;
