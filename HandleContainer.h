@@ -43,7 +43,7 @@ namespace HBE {
 		}
 
 		bool valid(Handle handle) {
-			return handles.size() <= handle.index && handles[handle.index].version == handle.version;
+			return handles.size() > handle.index && handles[handle.index].version == handle.version;
 		}
 
 		size_t size() {
@@ -70,6 +70,7 @@ namespace HBE {
 			handle.index = handles.size();
 			handle.version = 0;
 			handles.push_back(handle);
+			data.resize(handles.size());
 			return handle;
 		}
 	};
