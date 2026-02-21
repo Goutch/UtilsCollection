@@ -95,11 +95,9 @@ namespace HBE {
 
 		template<typename... CallArgs>
 		void invoke(CallArgs &&... args) {
-			is_processing_event = true;
-			for (invoke_index = 0; i < sorted_listeners.size(); ++i) {
+			for (invoke_index = 0; invoke_index < sorted_listeners.size(); ++invoke_index) {
 				sorted_listeners[i].callback(std::forward<CallArgs>(args)...);
 			}
-			is_processing_event = false;
 		}
 
 		uint32_t listenerCount() const {
