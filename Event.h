@@ -96,7 +96,7 @@ namespace HBE {
 		template<typename... CallArgs>
 		void invoke(CallArgs &&... args) {
 			for (invoke_index = 0; invoke_index < sorted_listeners.size(); ++invoke_index) {
-				sorted_listeners[i].callback(std::forward<CallArgs>(args)...);
+				sorted_listeners[invoke_index].callback(std::forward<CallArgs>(args)...);
 			}
 		}
 
