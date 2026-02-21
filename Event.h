@@ -20,8 +20,9 @@ namespace HBE {
 		};
 
 		HandleContainer<Listener> container;
-		std::vector<Listener> sorted_listeners;
+		std::vector <Listener> sorted_listeners;
 		size_t next_id = 0;
+		uint32_t invoke_index = 0;
 	public:
 		Event() = default;
 
@@ -29,12 +30,16 @@ namespace HBE {
 
 		Event &operator=(const Event &) = delete;
 
-		Event(Event &&other) noexcept {
+		Event(Event &&other)
+
+		noexcept {
 			container = std::move(other.container);
 			sorted_listeners = std::move(other.sorted_listeners);
 		}
 
-		Event &operator=(Event &&other) noexcept {
+		Event &operator=(Event &&other)
+
+		noexcept {
 			container = std::move(other.container);
 			sorted_listeners = std::move(other.sorted_listeners);
 			return *this;
@@ -76,6 +81,10 @@ namespace HBE {
 				for (int i = sorted_listeners.size() - 1; i >= 0; --i) {
 					if (sorted_listeners[i].id == id) {
 						sorted_listeners.erase(sorted_listeners.begin() + i);
+						//make sure that deletion of the listener does not affect the invoke loop
+						if (invoke_index >= i) {
+							invoke_index--;
+						}
 						break;
 					}
 				}
@@ -86,8 +95,11 @@ namespace HBE {
 
 		template<typename... CallArgs>
 		void invoke(CallArgs &&... args) {
-			for (const Listener &l: sorted_listeners)
-				l.callback(std::forward<CallArgs>(args)...);
+			is_processing_event = true;
+			for (invoke_index = 0; i < sorted_listeners.size(); ++i) {
+				sorted_listeners[i].callback(std::forward<CallArgs>(args)...);
+			}
+			is_processing_event = false;
 		}
 
 		uint32_t listenerCount() const {
