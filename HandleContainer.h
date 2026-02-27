@@ -4,16 +4,9 @@
 #include <cstdint>
 #include <vector>
 #include "RawVector.h"
+#include "Handle.h"
 
 namespace HBE {
-	struct Handle {
-		uint32_t index = std::numeric_limits<uint32_t>::max();
-		uint32_t version = std::numeric_limits<uint32_t>::max();
-
-		bool operator==(Handle other) const {
-			return index == other.index && version == other.version;
-		}
-	};
 
 	template<typename T>
 	class HandleContainer {
@@ -22,12 +15,15 @@ namespace HBE {
 		RawVector<uint32_t> free_handles_indices;
 	public:
 		HandleContainer() = default;
+
 		HandleContainer(HandleContainer<T> &&other) {
 			free_handles_indices = std::move(other.free_handles_indices);
 			handles = std::move(other.handles);
 			data = std::move(other.data);
 		}
+
 		HandleContainer &operator=(HandleContainer &other) = delete;
+
 		HandleContainer &operator=(HandleContainer &&other) noexcept {
 			free_handles_indices = std::move(other.free_handles_indices);
 			handles = std::move(other.handles);
