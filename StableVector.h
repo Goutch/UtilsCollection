@@ -1,6 +1,6 @@
 #pragma once
 #include <bit>
-#include "Vector.h"
+#include "RawVector.h"
 
 namespace HBE
 {
@@ -18,7 +18,7 @@ namespace HBE
             T data[PAGE_SIZE];
         };
 
-        Vector<Page*> pages;
+        RawVector<Page*> pages;
         size_t m_size = 0;
 
     private :
@@ -71,12 +71,23 @@ namespace HBE
             push_back(item);
         }
 
+        void erase(size_t i)
+        {
+            if (i >= m_size)
+                return;
+            if (i == size - 1)
+            {
+                m_size--;
+            }
+            (*this)[i] = {};
+        }
+
         void reserve(size_t new_capacity)
         {
             if (new_capacity <= capacity())
                 return;
 
-            size_t required_pages = getPageIndex(new_capacity);
+            size_t required_pages = getPageIndex(new_capacity) + 1;
 
             while (pages.size() < required_pages)
                 pages.push_back(new Page());
