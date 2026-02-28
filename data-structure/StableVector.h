@@ -1,5 +1,4 @@
 #pragma once
-#include <bit>
 #include "RawVector.h"
 
 namespace HBE
@@ -10,7 +9,13 @@ namespace HBE
         static_assert(std::is_trivially_copyable<T>(), "T must be trivially copyable");
         static_assert(PAGE_SIZE > 0, "Page size must be greater than 0");
         static_assert(PAGE_SIZE > 0 && (PAGE_SIZE & (PAGE_SIZE - 1)) == 0, "Page size must be power of 2");
-        static constexpr size_t SHIFT = std::countr_zero(PAGE_SIZE);
+
+        constexpr size_t log2_constexpr(size_t n, size_t count = 0)
+        {
+            return (n <= 1) ? count : log2_constexpr(n >> 1, count + 1);
+        }
+
+        static constexpr size_t SHIFT = log2_constexpr(PAGE_SIZE);
         static constexpr size_t MASK = PAGE_SIZE - 1;
 
         struct Page

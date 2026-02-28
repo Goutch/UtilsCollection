@@ -57,7 +57,7 @@ namespace HBE
                 return handle;
             }
             Handle handle{};
-            handle.index = handles.size();
+            handle.index = static_cast<uint32_t>(handles.size());
             handle.version = 0;
             handles.push_back(handle);
             return handle;
