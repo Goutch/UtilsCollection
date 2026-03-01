@@ -1,11 +1,8 @@
 #pragma once
 
 #include <vector>
-#include <deque>
 #include <algorithm>
-#include "unordered_set"
 #include "functional"
-#include "unordered_map"
 #include "data-structure/StableHandleContainer.h"
 
 namespace HBE
@@ -17,13 +14,54 @@ namespace HBE
     {
         struct Listener
         {
-            event_subscription_id id;
-            int priority;
+            event_subscription_id id{};
             std::function<void(Args...)> callback;
+            int priority = 0;
+
+            Listener() = default;
+
+            Listener(const Listener& other)
+                : id(other.id), callback(other.callback), priority(other.priority)
+            {
+            }
+
+            Listener& operator=(const Listener& other)
+            {
+                id = other.id;
+                callback = other.callback;
+                priority = other.priority;
+                return *this;
+            }
+
+            Listener(Listener&& other) noexcept
+                : id(other.id), callback(std::move(other.callback)), priority(other.priority)
+            {
+                other.id = {};
+                other.priority = 0;
+            }
+
+            Listener& operator=(Listener&& other) noexcept
+            {
+                id = other.id;
+                callback = std::move(other.callback);
+                priority = other.priority;
+
+                other.id = {};
+                other.priority = 0;
+                return *this;
+            }
+
+            void reset()
+            {
+                id = {};
+                callback = {};
+                priority = 0;
+            }
         };
 
-        StableHandleContainer<Listener, 4> container;
-        RawVector<Listener> sorted_listeners;
+        HandleProvider provider;
+        std::vector<Listener> listeners;
+        std::vector<Listener> sorted_listeners;
         size_t next_id = 0;
         uint32_t invoke_index = 0;
 
@@ -39,29 +77,33 @@ namespace HBE
 
         Event(Event&& other) noexcept
         {
-            container = std::move(other.container);
+            listeners = std::move(other.listeners);
             sorted_listeners = std::move(other.sorted_listeners);
         }
 
         Event& operator=(Event&& other) noexcept
         {
-            container = std::move(other.container);
+            listeners = std::move(other.listeners);
             sorted_listeners = std::move(other.sorted_listeners);
             return *this;
         }
 
         void subscribe(event_subscription_id& id, std::function<void(Args...)> function, int priority)
         {
-            id = container.create();
-            container.set(id, Listener{id, priority, std::move(function)});
-            sorted_listeners.push_back(container.get(id));
+            id = provider.create();
+            listeners.resize(provider.size());
+            listeners[id.index].priority = priority;
+            listeners[id.index].callback = std::move(function);
+            listeners[id.index].id = id;
+
+            sorted_listeners.push_back(listeners.at(id.index));
             std::stable_sort(sorted_listeners.begin(), sorted_listeners.end(),
                              [](auto& a, auto& b) { return a.priority < b.priority; });
         }
 
         bool valid(event_subscription_id id)
         {
-            return container.valid(id);
+            return provider.valid(id);
         }
 
         void subscribe(event_subscription_id& id, void (*fn)(Args...), int priority = 0)
@@ -75,8 +117,7 @@ namespace HBE
         template <typename T>
         void subscribe(event_subscription_id& id, T* instance, void (T::*method)(Args...), int priority = 0)
         {
-            subscribe(id,
-                      [instance, method](Args... args)
+            subscribe(id, [instance, method](Args... args)
                       {
                           (instance->*method)(args...);
                       },
@@ -86,9 +127,11 @@ namespace HBE
 
         void unsubscribe(event_subscription_id id)
         {
-            if (container.valid(id))
+            if (provider.valid(id))
             {
-                container.release(id);
+                listeners[id.index].reset();
+                provider.release(id);
+                listeners.resize(provider.size());
                 for (int i = sorted_listeners.size() - 1; i >= 0; --i)
                 {
                     if (sorted_listeners[i].id == id)
@@ -103,6 +146,7 @@ namespace HBE
                     }
                 }
             }
+
             else
             {
                 printf("Trying to unsubscribe from an event with invalid subscription id ");

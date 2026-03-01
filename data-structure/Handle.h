@@ -1,4 +1,7 @@
 #pragma once
+#include <limits>
+#define HBE_NULL_HANDLE Handle{};
+
 namespace HBE
 {
     struct Handle

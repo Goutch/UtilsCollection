@@ -6,7 +6,7 @@ namespace HBE
     template <typename T, size_t PAGE_SIZE>
     class StableVector
     {
-        static_assert(std::is_trivially_copyable<T>(), "T must be trivially copyable");
+        static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
         static_assert(PAGE_SIZE > 0, "Page size must be greater than 0");
         static_assert(PAGE_SIZE > 0 && (PAGE_SIZE & (PAGE_SIZE - 1)) == 0, "Page size must be power of 2");
 
@@ -121,6 +121,14 @@ namespace HBE
         size_t size()
         {
             return m_size;
+        }
+
+        T* data()
+        {
+            if (size() > 0)
+                return pages[0].data;
+            else
+                return nullptr;
         }
 
         size_t capacity() const

@@ -15,20 +15,14 @@ namespace HBE
         StableHandleContainer() = default;
         ~StableHandleContainer() = default;
 
-        Handle push_back(const T& value)
+        Handle create()
         {
             Handle handle = handle_provider.create();
             m_stable_data.resize(handle_provider.size());
-            m_stable_data[handle.index] = value;
             return handle;
         }
 
-        Handle emplace_back(T&& value)
-        {
-            return push_back(value);
-        }
-
-        T get(const Handle& handle)
+        T& get(const Handle& handle)
         {
             return m_stable_data[handle.index];
         }
@@ -41,6 +35,11 @@ namespace HBE
         T& operator[](Handle handle)
         {
             return get(handle);
+        }
+
+        bool valid(const Handle& handle)
+        {
+            return handle_provider.valid(handle);
         }
     };
 }
