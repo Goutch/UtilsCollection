@@ -92,11 +92,12 @@ namespace HBE
         {
             id = provider.create();
             listeners.resize(provider.size());
-            listeners[id.index].priority = priority;
-            listeners[id.index].callback = std::move(function);
-            listeners[id.index].id = id;
+			uint32_t index= provider.index(id);
+            listeners[index].priority = priority;
+            listeners[index].callback = std::move(function);
+            listeners[index].id = id;
 
-            sorted_listeners.push_back(listeners.at(id.index));
+            sorted_listeners.push_back(listeners.at(index));
             std::stable_sort(sorted_listeners.begin(), sorted_listeners.end(),
                              [](auto& a, auto& b) { return a.priority < b.priority; });
         }
@@ -129,7 +130,7 @@ namespace HBE
         {
             if (provider.valid(id))
             {
-                listeners[id.index].reset();
+                listeners[provider.index(id)].reset();
                 provider.release(id);
                 listeners.resize(provider.size());
                 for (int i = sorted_listeners.size() - 1; i >= 0; --i)

@@ -1,17 +1,11 @@
 #pragma once
 #include <limits>
-#define HBE_NULL_HANDLE Handle{};
+#include <cstdint>
+#define HBE_NULL_HANDLE std::numeric_limits<uint64_t>::max();
 
 namespace HBE
 {
-    struct Handle
-    {
-        uint32_t index = std::numeric_limits<uint32_t>::max();
-        uint32_t version = std::numeric_limits<uint32_t>::max();
-
-        bool operator==(Handle other) const
-        {
-            return index == other.index && version == other.version;
-        }
-    };
+    typedef uint64_t hbe_handle_t;
+	using ImageHandle = hbe_handle_t;
+	typedef hbe_handle_t Handle;
 }
