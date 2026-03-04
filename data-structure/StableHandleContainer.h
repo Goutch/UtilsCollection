@@ -24,12 +24,12 @@ namespace HBE
 
         T& get(const Handle& handle)
         {
-            return m_stable_data[handle.index];
+            return m_stable_data[handle_provider.index(handle)];
         }
 
-        void erase(const Handle& handle)
+        void release(const Handle& handle)
         {
-            m_stable_data.erase(handle.index);
+            m_stable_data.erase(handle_provider.index(handle));
         }
 
         T& operator[](Handle handle)
