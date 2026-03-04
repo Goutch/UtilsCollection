@@ -18,12 +18,7 @@ namespace HBE
         static constexpr size_t SHIFT = log2_constexpr(PAGE_SIZE);
         static constexpr size_t MASK = PAGE_SIZE - 1;
 
-        struct Page
-        {
-            T data[PAGE_SIZE];
-        };
-
-        RawVector<Page*> pages;
+        RawVector<T[PAGE_SIZE]> pages;
         size_t m_size = 0;
 
     private :
@@ -95,7 +90,7 @@ namespace HBE
             size_t required_pages = getPageIndex(new_capacity) + 1;
 
             while (pages.size() < required_pages)
-                pages.push_back(new Page());
+                pages.emplace_back();
         }
 
         void resize(size_t new_size)
@@ -140,14 +135,14 @@ namespace HBE
         {
             const size_t page_index = getPageIndex(i);
             const size_t local_index = getLocalIndex(i);
-            return pages[page_index]->data[local_index];
+            return pages[page_index][local_index];
         }
 
         const T& operator[](size_t i) const
         {
             const size_t page_index = getPageIndex(i);
             const size_t local_index = getLocalIndex(i);
-            return pages[page_index]->data[local_index];
+            return pages[page_index][local_index];
         }
     };
 }
