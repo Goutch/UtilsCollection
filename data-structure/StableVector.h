@@ -4,7 +4,6 @@
 namespace HBE {
     template<typename T, size_t PAGE_SIZE>
     class StableVector {
-        static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
         static_assert(PAGE_SIZE > 0, "Page size must be greater than 0");
         static_assert(PAGE_SIZE > 0 && (PAGE_SIZE & (PAGE_SIZE - 1)) == 0, "Page size must be power of 2");
 
@@ -14,7 +13,10 @@ namespace HBE {
 
         static constexpr size_t SHIFT = log2_constexpr(PAGE_SIZE, 0);
         static constexpr size_t MASK = PAGE_SIZE - 1;
-        RawVector<T[PAGE_SIZE]> pages;
+        struct Page {
+            T data[PAGE_SIZE];
+        };
+        std::vector<Page*> pages;
         size_t m_size = 0;
 
     private :
@@ -76,7 +78,7 @@ namespace HBE {
             size_t required_pages = getPageIndex(new_capacity) + 1;
 
             while (pages.size() < required_pages)
-                pages.emplace_back();
+                pages.emplace_back(new Page());
         }
 
         void resize(size_t new_size) {

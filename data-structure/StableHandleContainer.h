@@ -7,7 +7,6 @@ namespace HBE
     template <typename T, size_t PAGE_SIZE>
     class StableHandleContainer
     {
-        static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
         StableVector<T, PAGE_SIZE> m_stable_data;
         HandleProvider handle_provider;
 
