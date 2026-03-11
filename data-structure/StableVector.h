@@ -68,7 +68,6 @@ namespace HBE {
             if (i == m_size - 1) {
                 m_size--;
             }
-            (*this)[i] = {};
         }
 
         void reserve(size_t new_capacity) {
@@ -88,9 +87,6 @@ namespace HBE {
                 // zero initialize new elements (since trivially copyable)
                 size_t old_size = m_size;
                 m_size = new_size;
-
-                for (size_t i = old_size; i < new_size; ++i)
-                    (*this)[i] = T{};
             } else {
                 // shrinking only changes logical size (stable storage)
                 m_size = new_size;
@@ -115,13 +111,13 @@ namespace HBE {
         T &operator[](size_t i) {
             const size_t page_index = getPageIndex(i);
             const size_t local_index = getLocalIndex(i);
-            return pages[page_index][local_index];
+            return pages[page_index]->data[local_index];
         }
 
         const T &operator[](size_t i) const {
             const size_t page_index = getPageIndex(i);
             const size_t local_index = getLocalIndex(i);
-            return pages[page_index][local_index];
+            return pages[page_index]->data[local_index];
         }
     };
 }
