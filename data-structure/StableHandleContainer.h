@@ -21,7 +21,7 @@ namespace HBE {
 		}
 
 		T &get(const Handle &handle) {
-			return m_stable_data[handle_provider.index(handle)];
+			return m_stable_data[HandleProvider::index(handle)];
 		}
 
 		void clear(){
