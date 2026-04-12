@@ -91,7 +91,7 @@ namespace HBE {
 		}
 
 		T *data() {
-			return data();
+			return m_data;
 		}
 
 		void copy(const RawVector<T> &other) {
