@@ -130,6 +130,21 @@ namespace HBE {
 			m_count += count;
 		}
 
+		void addRange(const RawVector<T> &other) {
+			if (other.size() == 0)
+				return;
+
+			reserve(size() + other.size());
+
+			memcpy(
+					m_data + m_count,
+					other.m_data,
+					other.size() * sizeof(T)
+			);
+
+			m_count += other.size();
+		}
+
 		void reserve(size_t new_capacity) {
 			if (new_capacity <= m_capacity)
 				return;
@@ -162,6 +177,10 @@ namespace HBE {
 
 
 		T &operator[](size_t i) {
+			return m_data[i];
+		}
+
+		const T &operator[](size_t i) const {
 			return m_data[i];
 		}
 
