@@ -90,6 +90,11 @@ namespace HBE {
             std::stable_sort(sorted_listeners.begin(), sorted_listeners.end(),
                              [](auto &a, auto &b) { return a.priority < b.priority; });
         }
+	    void move(event_subscription_id &id, std::function<void(Args...)> function) {
+		    listeners.resize(provider.size());
+		    uint32_t index = provider.index(id);
+		    listeners[index].callback = std::move(function);
+	    }
 
         bool valid(event_subscription_id id) {
             return provider.valid(id);
@@ -101,7 +106,13 @@ namespace HBE {
                       priority
             );
         }
-
+	    template<typename T>
+	    void move(event_subscription_id &id,  T *instance, void (T::*method)(Args...)) {
+		    move(id, [instance, method](Args... args) {
+			              (instance->*method)(args...);
+		              }
+		    );
+	    }
         template<typename T>
         void subscribe(event_subscription_id &id, T *instance, void (T::*method)(Args...), int priority = 0) {
             subscribe(id, [instance, method](Args... args) {
