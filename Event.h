@@ -78,6 +78,11 @@ namespace HBE {
             return *this;
         }
 
+		void clear() {
+			listeners.clear();
+			sorted_listeners.clear();
+			provider.clear();
+		}
         void subscribe(event_subscription_id &id, std::function<void(Args...)> function, int priority) {
             id = provider.create();
             listeners.resize(provider.size());
