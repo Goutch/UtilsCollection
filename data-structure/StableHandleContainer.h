@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include "StableVector.h"
 #include "HandleProvider.h"
 
@@ -28,8 +29,12 @@ namespace HBE {
 			m_stable_data.clear();
 			handle_provider.clear();
 		}
+
 		void release(const Handle &handle) {
-			m_stable_data.erase(handle_provider.index(handle));
+			T *slot = &get(handle);
+			std::destroy_at(slot);
+			std::construct_at(slot);
+			handle_provider.release(handle);
 		}
 
 		T &operator[](Handle handle) {
