@@ -31,6 +31,7 @@ namespace HBE {
 		}
 
 		void release(const Handle &handle) {
+			if (!handle_provider.valid(handle)) return;
 			T *slot = &get(handle);
 			std::destroy_at(slot);
 			std::construct_at(slot);

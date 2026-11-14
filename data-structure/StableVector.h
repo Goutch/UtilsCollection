@@ -45,7 +45,9 @@ namespace HBE {
 
         StableVector(StableVector &&Other) noexcept {
             pages = std::move(Other.pages);
-            Other.clear();
+            m_size = Other.m_size;
+            Other.pages.clear();
+            Other.m_size = 0;
         }
 
         StableVector(const StableVector &other) = delete;
@@ -74,7 +76,7 @@ namespace HBE {
             if (new_capacity <= capacity())
                 return;
 
-            size_t required_pages = getPageIndex(new_capacity) + 1;
+            size_t required_pages = getPageIndex(new_capacity - 1) + 1;
 
             while (pages.size() < required_pages)
                 pages.emplace_back(new Page());
@@ -99,7 +101,7 @@ namespace HBE {
 
         T *data() {
             if (size() > 0)
-                return pages[0].data;
+                return pages[0]->data;
             else
                 return nullptr;
         }
