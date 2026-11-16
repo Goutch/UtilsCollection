@@ -2,167 +2,167 @@
 
 #include <vector>
 #include <algorithm>
+#include <cstdio>
 #include "functional"
 #include "data-structure/StableHandleContainer.h"
 
 namespace HBE {
-    using event_subscription_id = Handle;
+	using event_subscription_id = Handle;
 
-    template<typename... Args>
-    class Event {
-        struct Listener {
-            event_subscription_id id{};
-            std::function<void(Args...)> callback;
-            int priority = 0;
+	// Listeners run by priority, lowest first, then in subscription order. A listener may subscribe, unsubscribe and invoke the same
+	// event from its callback: subscriptions made during an invoke run from the next invoke, an unsubscribed listener is not called again.
+	template<typename... Args>
+	class Event {
+		struct Listener {
+			event_subscription_id id{};
+			std::function<void(Args...)> callback;
+			int priority = 0;
+			bool unsubscribed = false;
+		};
 
-            Listener() = default;
+		HandleProvider provider;
+		std::vector<Listener> listeners; // sorted by priority, then subscription order
+		std::vector<Listener> listeners_subscribed_while_invoking;
+		uint32_t invoke_depth = 0;
+		bool listeners_unsubscribed_while_invoking = false;
+		bool consumed = false;
 
-            Listener(const Listener &other)
-                : id(other.id), callback(other.callback), priority(other.priority) {
-            }
+		void insertByPriority(Listener &&listener) {
+			auto after_same_priority = std::upper_bound(listeners.begin(), listeners.end(), listener.priority,
+			                                            [](int priority, const Listener &other) { return priority < other.priority; });
+			listeners.insert(after_same_priority, std::move(listener));
+		}
 
-            Listener &operator=(const Listener &other) {
-                id = other.id;
-                callback = other.callback;
-                priority = other.priority;
-                return *this;
-            }
+		void applyChangesMadeWhileInvoking() {
+			if (listeners_unsubscribed_while_invoking) {
+				std::erase_if(listeners, [](const Listener &listener) { return listener.unsubscribed; });
+				listeners_unsubscribed_while_invoking = false;
+			}
+			for (Listener &listener: listeners_subscribed_while_invoking) {
+				insertByPriority(std::move(listener));
+			}
+			listeners_subscribed_while_invoking.clear();
+		}
 
-            Listener(Listener &&other) noexcept
-                : id(other.id), callback(std::move(other.callback)), priority(other.priority) {
-                other.id = {};
-                other.priority = 0;
-            }
+	public:
+		Event() = default;
 
-            Listener &operator=(Listener &&other) noexcept {
-                id = other.id;
-                callback = std::move(other.callback);
-                priority = other.priority;
+		Event(const Event &) = delete;
 
-                other.id = {};
-                other.priority = 0;
-                return *this;
-            }
+		Event &operator=(const Event &) = delete;
 
-            void reset() {
-                id = {};
-                callback = {};
-                priority = 0;
-            }
-        };
+		Event(Event &&other) noexcept
+			: provider(std::move(other.provider)), listeners(std::move(other.listeners)) {
+		}
 
-        HandleProvider provider;
-        std::vector<Listener> listeners;
-        std::vector<Listener> sorted_listeners;
-        size_t next_id = 0;
-        uint32_t invoke_index = 0;
-
-    protected:
-        bool consumed = false;;
-
-    public:
-        Event() = default;
-
-        Event(const Event &) = delete;
-
-        Event &operator=(const Event &) = delete;
-
-        Event(Event &&other) noexcept {
-            listeners = std::move(other.listeners);
-            sorted_listeners = std::move(other.sorted_listeners);
-        }
-
-        Event &operator=(Event &&other) noexcept {
-            listeners = std::move(other.listeners);
-            sorted_listeners = std::move(other.sorted_listeners);
-            return *this;
-        }
+		Event &operator=(Event &&other) noexcept {
+			provider = std::move(other.provider);
+			listeners = std::move(other.listeners);
+			return *this;
+		}
 
 		void clear() {
-			listeners.clear();
-			sorted_listeners.clear();
+			if (invoke_depth > 0) {
+				for (Listener &listener: listeners) {
+					listener.unsubscribed = true;
+				}
+				listeners_unsubscribed_while_invoking = true;
+			} else {
+				listeners.clear();
+			}
+			listeners_subscribed_while_invoking.clear();
 			provider.clear();
 		}
-        void subscribe(event_subscription_id &id, std::function<void(Args...)> function, int priority) {
-            id = provider.create();
-            listeners.resize(provider.size());
-            uint32_t index = provider.index(id);
-            listeners[index].priority = priority;
-            listeners[index].callback = std::move(function);
-            listeners[index].id = id;
 
-            sorted_listeners.push_back(listeners.at(index));
-            std::stable_sort(sorted_listeners.begin(), sorted_listeners.end(),
-                             [](auto &a, auto &b) { return a.priority < b.priority; });
-        }
-	    void move(event_subscription_id &id, std::function<void(Args...)> function) {
-		    listeners.resize(provider.size());
-		    uint32_t index = provider.index(id);
-		    listeners[index].callback = std::move(function);
-	    }
+		void subscribe(event_subscription_id &id, std::function<void(Args...)> function, int priority) {
+			id = provider.create();
+			Listener listener{id, std::move(function), priority};
+			if (invoke_depth > 0) {
+				listeners_subscribed_while_invoking.push_back(std::move(listener));
+			} else {
+				insertByPriority(std::move(listener));
+			}
+		}
 
-        bool valid(event_subscription_id id) {
-            return provider.valid(id);
-        }
+		void subscribe(event_subscription_id &id, void (*fn)(Args...), int priority = 0) {
+			subscribe(id, [fn](Args... args) { fn(args...); }, priority);
+		}
 
-        void subscribe(event_subscription_id &id, void (*fn)(Args...), int priority = 0) {
-            subscribe(id,
-                      [fn](Args... args) { fn(args...); },
-                      priority
-            );
-        }
-	    template<typename T>
-	    void move(event_subscription_id &id,  T *instance, void (T::*method)(Args...)) {
-		    move(id, [instance, method](Args... args) {
-			              (instance->*method)(args...);
-		              }
-		    );
-	    }
-        template<typename T>
-        void subscribe(event_subscription_id &id, T *instance, void (T::*method)(Args...), int priority = 0) {
-            subscribe(id, [instance, method](Args... args) {
-                          (instance->*method)(args...);
-                      },
-                      priority
-            );
-        }
+		template<typename T>
+		void subscribe(event_subscription_id &id, T *instance, void (T::*method)(Args...), int priority = 0) {
+			subscribe(id, [instance, method](Args... args) { (instance->*method)(args...); }, priority);
+		}
 
-        void unsubscribe(event_subscription_id id) {
-            if (provider.valid(id)) {
-                listeners[provider.index(id)].reset();
-                provider.release(id);
-                listeners.resize(provider.size());
-                for (int i = sorted_listeners.size() - 1; i >= 0; --i) {
-                    if (sorted_listeners[i].id == id) {
-                        sorted_listeners.erase(sorted_listeners.begin() + i);
-                        //make sure that deletion of the listener does not affect the invoke loop
-                        if (invoke_index >= i) {
-                            invoke_index--;
-                        }
-                        break;
-                    }
-                }
-            } else {
-                printf("Trying to unsubscribe from an event with invalid subscription id ");
-            }
-        }
+		// Same subscription and place in the order, another callback: for an object moved to a new address.
+		void replaceCallback(event_subscription_id id, std::function<void(Args...)> function) {
+			for (std::vector<Listener> *list: {&listeners, &listeners_subscribed_while_invoking}) {
+				for (Listener &listener: *list) {
+					if (listener.id == id) {
+						listener.callback = std::move(function);
+						return;
+					}
+				}
+			}
+		}
 
-        void consume() {
-            consumed = true;
-        }
+		template<typename T>
+		void replaceCallback(event_subscription_id id, T *instance, void (T::*method)(Args...)) {
+			replaceCallback(id, [instance, method](Args... args) { (instance->*method)(args...); });
+		}
 
-        template<typename... CallArgs>
-        void invoke(CallArgs &&... args) {
-            consumed = false;
-            for (invoke_index = 0; invoke_index < sorted_listeners.size(); ++invoke_index) {
-                if (consumed)
-                    break;
-                sorted_listeners[invoke_index].callback(std::forward<CallArgs>(args)...);
-            }
-        }
+		bool valid(event_subscription_id id) {
+			return provider.valid(id);
+		}
 
-        uint32_t listenerCount() const {
-            return sorted_listeners.size();
-        }
-    };
+		void unsubscribe(event_subscription_id id) {
+			if (!provider.valid(id)) {
+				printf("Trying to unsubscribe from an event with invalid subscription id\n");
+				return;
+			}
+			provider.release(id);
+			if (invoke_depth == 0) {
+				std::erase_if(listeners, [id](const Listener &listener) { return listener.id == id; });
+				return;
+			}
+			for (Listener &listener: listeners) {
+				if (listener.id == id) {
+					listener.unsubscribed = true; // erased when the invoke ends: the loop may be running its callback
+					listeners_unsubscribed_while_invoking = true;
+					return;
+				}
+			}
+			std::erase_if(listeners_subscribed_while_invoking, [id](const Listener &listener) { return listener.id == id; });
+		}
+
+		// Stops the invoke running now after the current listener.
+		void consume() {
+			consumed = true;
+		}
+
+		// Every listener gets the same arguments as lvalues: none can move them away from the next ones.
+		template<typename... CallArgs>
+		void invoke(CallArgs &&... args) {
+			const bool outer_invoke_consumed = consumed;
+			consumed = false;
+			invoke_depth++;
+			for (size_t listener_index = 0; listener_index < listeners.size() && !consumed; ++listener_index) {
+				if (!listeners[listener_index].unsubscribed) {
+					listeners[listener_index].callback(args...);
+				}
+			}
+			invoke_depth--;
+			consumed = outer_invoke_consumed;
+			if (invoke_depth == 0) {
+				applyChangesMadeWhileInvoking();
+			}
+		}
+
+		uint32_t listenerCount() const {
+			uint32_t count = static_cast<uint32_t>(listeners_subscribed_while_invoking.size());
+			for (const Listener &listener: listeners) {
+				if (!listener.unsubscribed) count++;
+			}
+			return count;
+		}
+	};
 }
